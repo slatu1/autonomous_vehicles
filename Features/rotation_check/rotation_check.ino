@@ -1,134 +1,173 @@
-//*******************************************************************************
-/*
- keyestudio 4wd BT Car
- lesson 13
- Avoiding Car
- http://www.keyestudio.com
-*/ 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  Includes and Definitions
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Basic demo for accelerometer readings from Adafruit MPU6050
 
-#include <math.h>
-#include "SR04.h"//define the library of ultrasonic sensor
-#define TRIG_PIN 12// set the signal output of ultrasonic sensor to D12 
-#define ECHO_PIN 13//set the signal input of ultrasonic sensor to D13 
-#define SCL_Pin  A5  //Set the clock pin to A5
-#define SDA_Pin  A4  //Set data pin to A4
+#include <Adafruit_MPU6050.h>
+#include <Adafruit_Sensor.h>
 #include <Wire.h>
-//control pins for left and right motors
-const int leftSpeed = 9; //means pin 9 on the Arduino controls the speed of left motor
-const int rightSpeed = 5;
-const int left1 = 3; //left 1 and left 2 control the direction of rotation of left motor
-const int left2 = 2;
-const int right1 = 8;
-const int right2 = 4;
 
-const int MPU = 0x68; // MPU6050 I2C address
-float AccX, AccY, AccZ; //linear acceleration
-float GyroX, GyroY, GyroZ; //angular velocity
-float accAngleX, accAngleY, gyroAngleX, gyroAngleY, gyroAngleZ; //used in void loop()
-float roll, pitch, yaw;
-float AccErrorX, AccErrorY, GyroErrorX, GyroErrorY, GyroErrorZ;
-float elapsedTime, currentTime, previousTime;
-int c = 0;
+Adafruit_MPU6050 mpu;
 
-const int maxSpeed = 255; //max PWM value written to motor speed pin. It is typically 255.
-const int minSpeed = 160; //min PWM value at which motor moves
-float angle; //due to how I orientated my MPU6050 on my car, angle = roll
+void setup(void) {
+  Serial.begin(115200);
+  while (!Serial)
+    delay(10); // will pause Zero, Leonardo, etc until serial console opens
 
-const int servopin = A3;//set the pin of servo to A3 
-int left_ctrl = 2;//define the direction control pins of group B motor
-int left_pwm = 5;//define the PWM control pins of group B motor
-int right_ctrl = 4;//define the direction control pins of group A motor
-int right_pwm = 6;//define the PWM control pins of group A motor
+  Serial.println("Adafruit MPU6050 test!");
 
-SR04 sr04 = SR04(ECHO_PIN,TRIG_PIN);
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  Global Variables
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-long distance,a1,a2;//define three distance
-float step_size=0.1;
-float x_init;
-float y_init;
-float x_pos;
-float y_pos;
-float theta;
-float active_wp[2] = {0,0};
-String ang;
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void setup() {
-   Serial.begin(9600);//start serial comms with set baud
-   
-  pinMode(left_ctrl,OUTPUT);//set direction control pins of group B motor to OUTPUT
-  pinMode(left_pwm,OUTPUT);//set PWM control pins of group B motor to OUTPUT
-  pinMode(right_ctrl,OUTPUT);//set direction control pins of group A motor to OUTPUT
-  pinMode(right_pwm,OUTPUT);//set PWM control pins of group A motor to OUTPUT
-  pinMode(TRIG_PIN, OUTPUT); //Set the trig pin to output
-  pinMode(ECHO_PIN, INPUT); //Set the echo pin to input
-//  servopulse(servopin,90);//the angle of servo is 90 degree
-//  delay(300);
-  pinMode(SCL_Pin,OUTPUT);// Set the clock pin to output
-  pinMode(SDA_Pin,OUTPUT);//Set the data pin to output
-
-   Wire.begin();                      // Initialize comunication
-  Wire.beginTransmission(MPU);       // Start communication with MPU6050 // MPU=0x68
-  Wire.write(0x6B);                  // Talk to the register 6B
-  Wire.write(0x00);                  // Make reset - place a 0 into the 6B register
-  Wire.endTransmission(true);        //end the transmission
-  // Call this function if you need to get the IMU error values for your module
-//  calculateError();
-  delay(20);
-  pinMode(left1, OUTPUT);
-  pinMode(left2, OUTPUT);
-  pinMode(right1, OUTPUT);
-  pinMode(right2, OUTPUT);
-  pinMode(leftSpeed, OUTPUT);
-  pinMode(rightSpeed, OUTPUT);
-  currentTime = micros();
-
-  x_init = 0;
-  y_init = 0;
-}
-
-
-void loop()
- {
-//  car_right(3000);
-
-
-  if (Serial.available()) {
-    ang = Serial.readString();
-    Serial.println(ang);
-    car_right(ang.toInt());
-    car_Stop();
+  // Try to initialize!
+  if (!mpu.begin()) {
+    Serial.println("Failed to find MPU6050 chip");
+    while (1) {
+      delay(10);
+    }
   }
-  
+  Serial.println("MPU6050 Found!");
+
+  mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
+  Serial.print("Accelerometer range set to: ");
+  switch (mpu.getAccelerometerRange()) {
+  case MPU6050_RANGE_2_G:
+    Serial.println("+-2G");
+    break;
+  case MPU6050_RANGE_4_G:
+    Serial.println("+-4G");
+    break;
+  case MPU6050_RANGE_8_G:
+    Serial.println("+-8G");
+    break;
+  case MPU6050_RANGE_16_G:
+    Serial.println("+-16G");
+    break;
+  }
+  mpu.setGyroRange(MPU6050_RANGE_500_DEG);
+  Serial.print("Gyro range set to: ");
+  switch (mpu.getGyroRange()) {
+  case MPU6050_RANGE_250_DEG:
+    Serial.println("+- 250 deg/s");
+    break;
+  case MPU6050_RANGE_500_DEG:
+    Serial.println("+- 500 deg/s");
+    break;
+  case MPU6050_RANGE_1000_DEG:
+    Serial.println("+- 1000 deg/s");
+    break;
+  case MPU6050_RANGE_2000_DEG:
+    Serial.println("+- 2000 deg/s");
+    break;
+  }
+
+  mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
+  Serial.print("Filter bandwidth set to: ");
+  switch (mpu.getFilterBandwidth()) {
+  case MPU6050_BAND_260_HZ:
+    Serial.println("260 Hz");
+    break;
+  case MPU6050_BAND_184_HZ:
+    Serial.println("184 Hz");
+    break;
+  case MPU6050_BAND_94_HZ:
+    Serial.println("94 Hz");
+    break;
+  case MPU6050_BAND_44_HZ:
+    Serial.println("44 Hz");
+    break;
+  case MPU6050_BAND_21_HZ:
+    Serial.println("21 Hz");
+    break;
+  case MPU6050_BAND_10_HZ:
+    Serial.println("10 Hz");
+    break;
+  case MPU6050_BAND_5_HZ:
+    Serial.println("5 Hz");
+    break;
+  }
+
+  Serial.println("");
+  delay(100);
 }
 
-void car_front()//car goes forward
-{
-    digitalWrite(left_ctrl,LOW);
-    analogWrite(left_pwm,155);
-    digitalWrite(right_ctrl,LOW);
-    analogWrite(right_pwm,155);
-    delay(step_size);
-//    d_trav += step_size;
+void loop(){
+  if (Serial.available()) {
+  //character = Serial.read();
+//  Serial.println((char)character);
+  //Serial.println((char)character);
+//    String data = Serial.readStringUntil(' ');
+    String data = Serial.readString();
+    Serial.println(data);
+    int d_ta[6];
+    String temp;
+    int index = 0;
+    
+    for(int i = 0; i < data.length(); i++){
+      if(data[i] == ' ' || data[i] == "/r"){
+        //Serial.println(temp);
+        d_ta[index] = temp.toInt();
+        index +=1;
+        temp = "";
+      }
+      else{
+        temp.concat(data[i]);
+      }
+//    Serial.print(data);
+    }
+    for(int k=0; k<6; k++){
+      Serial.print("Parameter ");
+      Serial.print(k);
+      Serial.print(": ");
+      Serial.println(d_ta[k]);
+    }
+
+    switch(d_ta[0]){
+      case 1:
+            Serial.println("Move Left");
+            car_left(d_ta[1]);
+            break;
+      case 2:
+            Serial.println("Move Right");
+            car_right(d_ta[1]);
+            break;           
+    }
+}
 }
 
 
-void car_back()//go back
-{
-  
-  digitalWrite(left_ctrl,LOW);
-  analogWrite(left_pwm,200);
-  digitalWrite(right_ctrl,LOW);
-  analogWrite(right_pwm,200);
-}
+// void loop() {
+
+//     if (Serial.available()) {
+//     ang = Serial.readString();
+//     Serial.println(ang);
+//     car_right(ang.toInt());
+//     car_Stop();
+//   }
+
+//   // /* Get new sensor events with the readings */
+//   // sensors_event_t a, g, temp;
+//   // mpu.getEvent(&a, &g, &temp);
+
+//   // /* Print out the values */
+//   // Serial.print("Acceleration X: ");
+//   // Serial.print(a.acceleration.x);
+//   // Serial.print(", Y: ");
+//   // Serial.print(a.acceleration.y);
+//   // Serial.print(", Z: ");
+//   // Serial.print(a.acceleration.z);
+//   // Serial.println(" m/s^2");
+
+//   // Serial.print("Rotation X: ");
+//   // Serial.print(g.gyro.x);
+//   // Serial.print(", Y: ");
+//   // Serial.print(g.gyro.y);
+//   // Serial.print(", Z: ");
+//   // Serial.print(g.gyro.z);
+//   // Serial.println(" rad/s");
+
+//   // Serial.print("Temperature: ");
+//   // Serial.print(temp.temperature);
+//   // Serial.println(" degC");
+
+//   // Serial.println("");
+//   // delay(500);
+// }
+
 void car_left(float len)//car turns left
 {
   //float rads = 0;
@@ -139,10 +178,10 @@ void car_left(float len)//car turns left
     analogWrite(right_pwm, 250);
     delay(len);
 
-    analogWrite(left_pwm,0);//set the PWM control speed of B motor to 0
-    analogWrite(right_pwm,0);//set the PWM control speed of A motor to 0
-    //stop
-    delay(10);//delay in 2s
+    // analogWrite(left_pwm,0);//set the PWM control speed of B motor to 0
+    // analogWrite(right_pwm,0);//set the PWM control speed of A motor to 0
+    // //stop
+    // delay(10);//delay in 2s
     //rads += 1;
   //}
 }
@@ -150,48 +189,15 @@ void car_right(float len)//car turns right
 {
 //  float rads = 0;
 //  while(rads != angle){
-   // === Read accelerometer (on the MPU6050) data === //
-    readAcceleration();
-    // Calculating Roll and Pitch from the accelerometer data
-    accAngleX = (atan(AccY / sqrt(pow(AccX, 2) + pow(AccZ, 2))) * 180 / PI) - AccErrorX; //AccErrorX is calculated in the calculateError() function
     digitalWrite(left_ctrl, HIGH);
-    analogWrite(left_pwm, 255);
+    analogWrite(left_pwm, 250);
     digitalWrite(right_ctrl, LOW);
-    analogWrite(right_pwm, 205);
-    while(accAngleX < len){
-      delay(10);
-       // === Read accelerometer (on the MPU6050) data === //
-      readAcceleration();
-      // Calculating Roll and Pitch from the accelerometer data
-      accAngleX = (atan(AccY / sqrt(pow(AccX, 2) + pow(AccZ, 2))) * 180 / PI) - AccErrorX; //AccErrorX is calculated in the calculateError() function
-      Serial.println(accAngleX);
-    }
-    
-    
+    analogWrite(right_pwm, 200);
+    delay(len);
 
-//    analogWrite(left_pwm,0);//set the PWM control speed of B motor to 0
-//    analogWrite(right_pwm,0);//set the PWM control speed of A motor to 0
-//    //stop
-//    delay(10);//delay in 2s
+    // analogWrite(left_pwm,0);//set the PWM control speed of B motor to 0
+    // analogWrite(right_pwm,0);//set the PWM control speed of A motor to 0
+    // //stop
+    // delay(10);//delay in 2s
   //}
 }
-void car_Stop()//stop
-{
-  digitalWrite(left_ctrl,LOW);
-  analogWrite(left_pwm,0);
-  digitalWrite(right_ctrl,LOW);
-  analogWrite(right_pwm,0);
-  delay(2000);
-}
-
-void readAcceleration() {
-  Wire.beginTransmission(MPU);
-  Wire.write(0x3B); // Start with register 0x3B (ACCEL_XOUT_H)
-  Wire.endTransmission(false);
-  Wire.requestFrom(MPU, 6, true); // Read 6 registers total, each axis value is stored in 2 registers
-  //For a range of +-2g, we need to divide the raw values by 16384, according to the MPU6050 datasheet
-  AccX = (Wire.read() << 8 | Wire.read()) / 16384.0; // X-axis value
-  AccY = (Wire.read() << 8 | Wire.read()) / 16384.0; // Y-axis value
-  AccZ = (Wire.read() << 8 | Wire.read()) / 16384.0; // Z-axis value
-}
-//*******************************************************************************
