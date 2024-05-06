@@ -31,13 +31,19 @@ def scan():
     input = []
     data = []
     # wait for arduino to be ready before storing values
-    rready = ser.readline()
-    if(rready == "Ready"):
-        input = ser.readline().split()
-        while input[0] != "Done":
+    # rready = ser.readline()
+    input = ser.readline().split()
+    while input[0] != "Done":
+        if(input != " "):
             data.append(input) # store data
             ser.write(b'1\n'); # send ack
-            time.sleep(2)
+        time.sleep(2)
+    # if(rready == "Ready"):
+    #     input = ser.readline().split()
+    #     while input[0] != "Done":
+    #         data.append(input) # store data
+    #         ser.write(b'1\n'); # send ack
+    #         time.sleep(2)
     return data        
             
 def detour():
@@ -62,7 +68,7 @@ def detour():
 # wait for arduino to report an obstacle
 # provide detour coordinates to arduino 
 if __name__ == "__main__":
-    ser.write("1 10 15\n")
+    ser.write("1 10 15 \n")
     time.sleep(2)
     #while connected loop
     while connected:
@@ -76,7 +82,7 @@ if __name__ == "__main__":
             print("Robot has reached destination!")
             ser.close()             # close port 
             connected = 0
-            
+        time.sleep(2)   
     print("\nHost has disconnected from robot\n")           
     
 
