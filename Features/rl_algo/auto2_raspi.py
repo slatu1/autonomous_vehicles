@@ -76,7 +76,7 @@ if __name__ == "__main__":
     print("Entering..\n")
     # ser.write(bytearray("1 10 15 \n", 'ascii'))
     ser.write(b'1 10 15 \n')
-    print((b'1 10 15 \n'))
+    print(b'1 10 15 \n')
     time.sleep(2)
     #while connected loop
     while connected:
