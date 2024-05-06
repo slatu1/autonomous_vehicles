@@ -60,7 +60,12 @@ def detour():
     detour_wp = policy_iter(system_data, usound_data, dest)
     xd = detour_wp[0]
     yd = detour_wp[1]
-    ser.write(bytearray("1 " + xd + " " + yd + " \n", 'ascii'))
+    ser.write(b'1 ')
+    ser.write(bytes(xd))
+    ser.write(b' ')
+    ser.write(bytes(yd))
+    ser.write(b' \n')
+    # ser.write(bytearray("1 " + xd + " " + yd + " \n", 'ascii'))
     time.sleep(2)
     
 # establish comms with arduino
@@ -69,7 +74,8 @@ def detour():
 # provide detour coordinates to arduino 
 if __name__ == "__main__":
     print("Entering..\n")
-    ser.write(bytearray("1 10 15 \n", 'ascii'))
+    # ser.write(bytearray("1 10 15 \n", 'ascii'))
+    ser.write(b'1 10 15 \n')
     time.sleep(2)
     #while connected loop
     while connected:
