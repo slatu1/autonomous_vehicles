@@ -56,30 +56,96 @@ void setup(){
 //    }
 //}
 
+// How to test gyro
+// - send direction and angle 
+// - 
+
+
 void loop(){
+
   if (Serial.available()) {
+  //character = Serial.read();
+//  Serial.println((char)character);
+  //Serial.println((char)character);
+//    String data = Serial.readStringUntil(' ');
     String data = Serial.readString();
-    Serial.print("Message RCVD : ");
     Serial.println(data);
-    count = 1;
-    //if(data == "go"){
-      while(count <= iters){
-          Serial.println("-- Left --");
-          car_left(100);
-          get_mpu_data();
-          delay(50);
-          Serial.println("-- Stopped --");
-          car_Stop();
-          get_mpu_data();
-          delay(50);
-          count++;
+    int d_ta[6] = {0,0,0,0,0,0};
+    String temp;
+    int index = 0;
+    float gyr_resp;
+    
+    for(int i = 0; i < data.length(); i++){
+      Serial.println(data[i]);
+      if(data[i] == ' ' || data[i] == "/r" || data[i] == "/n" || data[i] == "/000"){
+        Serial.println(temp);
+        d_ta[index] = temp.toInt();
+        index +=1;
+        temp = "";
+//        Serial.println(temp);
       }
+      else{
+        temp.concat(data[i]);
+      }
+//    Serial.print(data);
+    }
+    for(int k=0; k<6; k++){
+      Serial.print("Parameter ");
+      Serial.print(k);
+      Serial.print(": ");
+      Serial.println(d_ta[k]);
+    }
+
+    switch(d_ta[0]){
+      case 1:           
+//            gyr_resp = car_turn(0, d_ta[1]);
+            gyr_resp = car_left(d_ta[1]);
+            Serial.print("Move Left - ");
+            Serial.println(gyr_resp);
+            break;
+      case 2:
+//            gyr_resp = car_turn(1, d_ta[1]);
+            gyr_resp = car_right(d_ta[1]);
+            Serial.print("Move Right - ");
+            Serial.println(gyr_resp);
+            break;           
+    }
+    // get_mpu_data();
+    // delay(50);
+    Serial.println("-- Stopped --");
+    car_Stop();
+    get_mpu_data();
+    delay(50);
+}
+
+
+
+
+
+
+  // if (Serial.available()) {
+  //   String data = Serial.readString();
+  //   Serial.print("Message RCVD : ");
+  //   Serial.println(data);
+  //   count = 1;
+    //if(data == "go"){
+      // while(count <= iters){
+      //     Serial.println("-- Left --");
+      //     car_left(100);
+          // get_mpu_data();
+          // delay(50);
+          // Serial.println("-- Stopped --");
+          // car_Stop();
+          // get_mpu_data();
+          // delay(50);
+      //     count++;
+      // }
     //}
     
 //    Serial.println(data);
   
 //    Serial.print(data);
-    }
+    // }
 //  car_left(50);
 //  get_mpu_data();
 //  delay(10);
@@ -225,38 +291,133 @@ void car_back()//go back
   digitalWrite(right_ctrl,LOW);
   analogWrite(right_pwm,200);
 }
-void car_left(float len)//car turns left
-{
-  //float rads = 0;
-  //while(rads != angle){
-    digitalWrite(left_ctrl, LOW);
-    analogWrite(left_pwm, 205);  
-    digitalWrite(right_ctrl, HIGH);
-    analogWrite(right_pwm, 255);
-    delay(len);
+// void car_left(float len)//car turns left
+// {
+//   //float rads = 0;
+//   //while(rads != angle){
+//     digitalWrite(left_ctrl, LOW);
+//     analogWrite(left_pwm, 205);  
+//     digitalWrite(right_ctrl, HIGH);
+//     analogWrite(right_pwm, 255);
+//     delay(len);
 
-    analogWrite(left_pwm,0);//set the PWM control speed of B motor to 0
-    analogWrite(right_pwm,0);//set the PWM control speed of A motor to 0
-    //stop
-    delay(10);//delay in 2s
-    //rads += 1;
-  //}
+//     analogWrite(left_pwm,0);//set the PWM control speed of B motor to 0
+//     analogWrite(right_pwm,0);//set the PWM control speed of A motor to 0
+//     //stop
+//     delay(10);//delay in 2s
+//     //rads += 1;
+//   //}
+// }
+
+
+float car_left(float len)//car turns left
+{
+  sensors_event_t a, g, temp;
+  Serial.println(len);
+  float len_deg = 0;
+  float rads = 0;
+  long int dt = 10;
+  float inc = 1;
+  float len_rads = len * 3.14159/180;
+  float previous_t,curr_t = 0;
+  digitalWrite(left_ctrl, LOW);
+  analogWrite(left_pwm, 200);  
+  digitalWrite(right_ctrl, HIGH);
+  analogWrite(right_pwm, 200);
+  curr_t = millis();
+  while(len_deg <= len + 5){
+    if(len_deg >= len-5 && len_deg <= len + 5){
+       return len_deg;
+    }
+    delay(inc);
+    previous_t = curr_t;
+    curr_t = millis();
+    float dt = (curr_t - previous_t)/1000; // s
+    /* Get new sensor events with the readings */
+    mpu.getEvent(&a, &g, &temp);
+  
+    /* Print out the values */
+//    Serial.print("Acceleration X: ");
+//    Serial.print(a.acceleration.x);
+//    Serial.print(", Y: ");
+//    Serial.print(a.acceleration.y);
+//    Serial.print(", Z: ");
+//    Serial.print(a.acceleration.z);
+//    Serial.println(" m/s^2");
+//  
+//    Serial.print("Rotation X: ");
+//    Serial.print(g.gyro.x);
+//    Serial.print(", Y: ");
+//    Serial.print(g.gyro.y);
+//    Serial.print(", Z: ");
+    Serial.print(g.gyro.z);
+    Serial.println(" rad/s");
+    rads += float(g.gyro.z)*float(dt);
+    Serial.print(" dt(s) = ");
+    Serial.println(dt);
+    Serial.print(" rad = ");
+    Serial.println(rads);
+    len_deg = float(rads)*180.0/3.14159;
+    Serial.print(" deg = ");
+    Serial.println(len_deg);
+  }
+
+  return len_deg;
 }
-void car_right(float len)//car turns right
-{
-//  float rads = 0;
-//  while(rads != angle){
-    digitalWrite(left_ctrl, HIGH);
-    analogWrite(left_pwm, 255);
-    digitalWrite(right_ctrl, LOW);
-    analogWrite(right_pwm, 205);
-    delay(len);
 
-    analogWrite(left_pwm,0);//set the PWM control speed of B motor to 0
-    analogWrite(right_pwm,0);//set the PWM control speed of A motor to 0
-    //stop
-    delay(10);//delay in 2s
-  //}
+float car_right(float len)//car turns right
+{
+  sensors_event_t a, g, temp;
+  Serial.println(len);
+  float len_deg = 0;
+  float rads = 0;
+  long int dt = 10;
+  float inc = 1;
+  float len_rads = len * 3.14159/180;
+  float previous_t,curr_t = 0;
+  digitalWrite(left_ctrl, HIGH);
+  analogWrite(left_pwm, 200);  
+  digitalWrite(right_ctrl, LOW);
+  analogWrite(right_pwm, 200);
+  curr_t = millis();
+  while(len_deg <= len + 5){
+    if(len_deg >= len-5 && len_deg <= len + 5){
+       return len_deg;
+    }
+    delay(inc);
+    previous_t = curr_t;
+    curr_t = millis();
+    float dt = (curr_t - previous_t)/1000; // s
+    /* Get new sensor events with the readings */
+    mpu.getEvent(&a, &g, &temp);
+  
+    /* Print out the values */
+//    Serial.print("Acceleration X: ");
+//    Serial.print(a.acceleration.x);
+//    Serial.print(", Y: ");
+//    Serial.print(a.acceleration.y);
+//    Serial.print(", Z: ");
+//    Serial.print(a.acceleration.z);
+//    Serial.println(" m/s^2");
+//  
+//    Serial.print("Rotation X: ");
+//    Serial.print(g.gyro.x);
+//    Serial.print(", Y: ");
+//    Serial.print(g.gyro.y);
+//    Serial.print(", Z: ");
+    Serial.print(g.gyro.z);
+    Serial.println(" rad/s");
+    rads += float(g.gyro.z)*float(dt);
+    Serial.print(" dt(s) = ");
+    Serial.println(dt);
+    Serial.print(" rad = ");
+    Serial.println(rads);
+    len_deg = -1*(float(rads)*180.0/3.14159);
+    Serial.print(" deg = ");
+    Serial.println(len_deg);
+  }
+
+  return len_deg;
 }
 void car_Stop()//stop
 {
