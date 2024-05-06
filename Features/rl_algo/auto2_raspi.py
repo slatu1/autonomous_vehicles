@@ -36,7 +36,7 @@ def scan():
     while input[0] != "Done":
         if(input != " "):
             data.append(input) # store data
-            ser.write(b'1\n'); # send ack
+            ser.write(b'1 \n'); # send ack
         time.sleep(2)
     # if(rready == "Ready"):
     #     input = ser.readline().split()
@@ -48,11 +48,11 @@ def scan():
             
 def detour():
     # send request for environment scan
-    ser.write(b'3\n')
+    ser.write(b'3 \n')
     time.sleep(2)
     usound_data = scan() #10 entries
     # send request for current data
-    ser.write(b'2\n')
+    ser.write(b'2 \n')
     time.sleep(2)
     # read information
     report = ser.readline()
@@ -60,7 +60,7 @@ def detour():
     detour_wp = policy_iter(system_data, usound_data, dest)
     xd = detour_wp[0]
     yd = detour_wp[1]
-    ser.write("1 " + xd + " " + yd + "\n")
+    ser.write(bytearray("1 " + xd + " " + yd + " \n", 'ascii'))
     time.sleep(2)
     
 # establish comms with arduino
@@ -68,7 +68,7 @@ def detour():
 # wait for arduino to report an obstacle
 # provide detour coordinates to arduino 
 if __name__ == "__main__":
-    ser.write("1 10 15 \n")
+    ser.write(bytearray("1 10 15 \n", 'ascii'))
     time.sleep(2)
     #while connected loop
     while connected:
