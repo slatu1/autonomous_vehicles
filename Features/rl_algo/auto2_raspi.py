@@ -68,6 +68,7 @@ def detour():
 # wait for arduino to report an obstacle
 # provide detour coordinates to arduino 
 if __name__ == "__main__":
+    print("Entering..\n")
     ser.write(bytearray("1 10 15 \n", 'ascii'))
     time.sleep(2)
     #while connected loop
